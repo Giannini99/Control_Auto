@@ -21,11 +21,14 @@ class BubbleLevelViewModel(
     private val configRepository: ConfigRepository,
     private val computeOrientation: ComputeOrientationUseCase
 ) : ViewModel(), SensorEventListener {
+
     private val _uiState = MutableStateFlow(BubbleLevelUiState())
     val uiState: StateFlow<BubbleLevelUiState> = _uiState.asStateFlow()
+
     private var mountOrientation = Orientation.VERTICAL
     private var rawPitch = 0f
     private var rawRoll = 0f
+
     init {
         viewModelScope.launch {
             val config = configRepository.load()
@@ -33,19 +36,23 @@ class BubbleLevelViewModel(
         }
         registerSensor()
     }
+
     private fun registerSensor() {
         sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_UI)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_GAME)
         }
     }
+
     override fun onSensorChanged(event: SensorEvent) {
         if (event.sensor.type == Sensor.TYPE_ACCELEROMETER) {
             val x = event.values[0]
             val y = event.values[1]
             val z = event.values[2]
+
             val (pitch, roll) = computeOrientation(x, y, z, mountOrientation)
             rawPitch = pitch
             rawRoll = roll
+
             val state = _uiState.value
             val adjustedPitch = pitch - state.offsetPitch
             val adjustedRoll = roll - state.offsetRoll
@@ -60,6 +67,7 @@ class BubbleLevelViewModel(
             }
         }
     }
+
     override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) = Unit
 
     fun calibrate() {
@@ -73,6 +81,7 @@ class BubbleLevelViewModel(
             )
         }
     }
+
     override fun onCleared() {
         sensorManager.unregisterListener(this)
     }

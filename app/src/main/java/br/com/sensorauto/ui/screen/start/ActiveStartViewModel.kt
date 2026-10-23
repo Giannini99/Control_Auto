@@ -183,9 +183,11 @@ class ActiveStartViewModel(
         // Se config for null, estamos em modo PREVIEW (Hz da UI, todos ativos)
         val accelDelay = if (config != null) 1_000_000 / config.accelHz else SensorManager.SENSOR_DELAY_UI
         val gyroDelay = if (config != null) 1_000_000 / config.gyroHz else SensorManager.SENSOR_DELAY_UI
+        val magnetoDelay = if (config != null) 1_000_000 / config.magnetoHz else SensorManager.SENSOR_DELAY_UI
         
         val accelEnabled = config?.accelEnabled ?: true
         val gyroEnabled = config?.gyroEnabled ?: true
+        val magnetoEnabled = config?.magnetoEnabled ?: true
 
         if (accelEnabled) {
             sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
@@ -195,6 +197,11 @@ class ActiveStartViewModel(
         if (gyroEnabled) {
             sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
                 sensorManager.registerListener(this, it, gyroDelay)
+            }
+        }
+        if (magnetoEnabled) {
+            sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let {
+                sensorManager.registerListener(this, it, magnetoDelay)
             }
         }
     }
@@ -217,6 +224,11 @@ class ActiveStartViewModel(
                 pushSample(gyroBuffer, sample) { copy(gyroSamples = gyroBuffer.toList()) }
                 if (isRecording && (activeConfig?.gyroEnabled != false)) {
                     csvWriter.writeGyro(ts, sample[0], sample[1], sample[2])
+                }
+            }
+            Sensor.TYPE_MAGNETIC_FIELD -> {
+                if (isRecording && (activeConfig?.magnetoEnabled != false)) {
+                    csvWriter.writeMagneto(ts, sample[0], sample[1], sample[2])
                 }
             }
         }

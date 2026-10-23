@@ -64,6 +64,15 @@ class SensorConfigViewModel(
             freqRange = 1..10
         ),
         SensorConfigItem(
+            type = SensorType.MAGNETO,
+            label = "Magnetômetro",
+            description = "Mede o campo magnético ambiente ao longo dos 3 eixos (bússola e orientação).",
+            isAvailable = sensorChecker.isAvailable(SensorType.MAGNETO),
+            isEnabled = config.magnetoEnabled,
+            frequencyHz = config.magnetoHz,
+            freqRange = 10..200
+        ),
+        SensorConfigItem(
             type = SensorType.CAMERA,
             label = "Câmera",
             description = "Tira fotos em intervalos regulares durante a inspeção para análise visual posterior.",
@@ -77,20 +86,22 @@ class SensorConfigViewModel(
 
     fun toggleSensor(type: SensorType, enabled: Boolean) {
         config = when (type) {
-            SensorType.ACCEL  -> config.copy(accelEnabled = enabled)
-            SensorType.GYRO   -> config.copy(gyroEnabled = enabled)
-            SensorType.GPS    -> config.copy(gpsEnabled = enabled)
-            SensorType.CAMERA -> config.copy(cameraEnabled = enabled)
+            SensorType.ACCEL   -> config.copy(accelEnabled = enabled)
+            SensorType.GYRO    -> config.copy(gyroEnabled = enabled)
+            SensorType.GPS     -> config.copy(gpsEnabled = enabled)
+            SensorType.CAMERA  -> config.copy(cameraEnabled = enabled)
+            SensorType.MAGNETO -> config.copy(magnetoEnabled = enabled)
         }
         refresh()
     }
 
     fun updateFrequency(type: SensorType, hz: Int) {
         config = when (type) {
-            SensorType.ACCEL  -> config.copy(accelHz = hz)
-            SensorType.GYRO   -> config.copy(gyroHz = hz)
-            SensorType.GPS    -> config.copy(gpsHz = hz)
-            SensorType.CAMERA -> config.copy(cameraIntervalSeconds = hz / 10f)
+            SensorType.ACCEL   -> config.copy(accelHz = hz)
+            SensorType.GYRO    -> config.copy(gyroHz = hz)
+            SensorType.GPS     -> config.copy(gpsHz = hz)
+            SensorType.CAMERA  -> config.copy(cameraIntervalSeconds = hz / 10f)
+            SensorType.MAGNETO -> config.copy(magnetoHz = hz)
         }
         refresh()
     }

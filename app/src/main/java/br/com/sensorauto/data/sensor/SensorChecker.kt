@@ -14,5 +14,6 @@ class SensorChecker(
         SensorType.GYRO   -> sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE) != null
         SensorType.GPS    -> true
         SensorType.CAMERA -> packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)
+        SensorType.MAGNETO -> sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD) != null
     }
 }

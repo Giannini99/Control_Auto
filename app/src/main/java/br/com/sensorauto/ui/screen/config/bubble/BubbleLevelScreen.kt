@@ -8,11 +8,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -58,42 +59,41 @@ fun BubbleLevelScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                LevelStatusBadge(isLevel = state.isLevel)
+            LevelStatusBadge(isLevel = state.isLevel)
 
-                Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
 
-                BubbleLevelWidget(
-                    pitchDeg = state.pitchDeg,
-                    rollDeg = state.rollDeg,
-                    isLevel = state.isLevel
-                )
+            BubbleLevelWidget(
+                pitchDeg = state.pitchDeg,
+                rollDeg = state.rollDeg,
+                isLevel = state.isLevel
+            )
 
-                Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(4.dp))
 
-                SectionCard(title = "Leitura dos Eixos") {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceAround
-                    ) {
-                        AxisReadout(label = "Pitch (Horizontal)", value = state.pitchDeg)
-                        AxisReadout(label = "Roll (Lateral)", value = state.rollDeg)
-                    }
+            SectionCard(title = "Leitura dos Eixos") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround
+                ) {
+                    AxisReadout(label = "Pitch (Horizontal)", value = state.pitchDeg)
+                    AxisReadout(label = "Roll (Lateral)", value = state.rollDeg)
                 }
             }
+
+            Spacer(Modifier.height(16.dp))
 
             PrimaryButton(
                 text = "Calibrar / Zerar Nível",
                 onClick = { viewModel.calibrate() }
             )
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }

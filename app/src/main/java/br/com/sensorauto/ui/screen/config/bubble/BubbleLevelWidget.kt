@@ -1,7 +1,6 @@
 package br.com.sensorauto.ui.screen.config.bubble
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -38,8 +37,8 @@ fun BubbleLevelWidget(
         val targetX = (rollDeg / maxAngle).coerceIn(-1f, 1f)
         val targetY = (pitchDeg / maxAngle).coerceIn(-1f, 1f)
 
-        animatedX.animateTo(targetX, animationSpec = spring(dampingRatio = 0.7f, stiffness = 200f))
-        animatedY.animateTo(targetY, animationSpec = spring(dampingRatio = 0.7f, stiffness = 200f))
+        animatedX.snapTo(targetX)
+        animatedY.snapTo(targetY)
     }
 
     Box(
@@ -50,7 +49,6 @@ fun BubbleLevelWidget(
             val center = Offset(size.width / 2f, size.height / 2f)
             val radius = min(size.width, size.height) / 2f - 16.dp.toPx()
 
-            // Outer circle
             drawCircle(
                 color = trackColor,
                 radius = radius,
@@ -58,7 +56,6 @@ fun BubbleLevelWidget(
                 style = Stroke(width = 3.dp.toPx())
             )
 
-            // Inner target circle (tolerance zone)
             drawCircle(
                 color = trackColor.copy(alpha = 0.2f),
                 radius = radius * 0.25f,
@@ -71,7 +68,6 @@ fun BubbleLevelWidget(
                 style = Stroke(width = 2.dp.toPx())
             )
 
-            // Crosshairs
             drawLine(
                 color = crossColor,
                 start = Offset(center.x - radius, center.y),
@@ -84,8 +80,6 @@ fun BubbleLevelWidget(
                 end = Offset(center.x, center.y + radius),
                 strokeWidth = 1.dp.toPx()
             )
-
-            // Bubble sphere position
             val maxOffsetPx = radius * 0.7f
             val bubbleX = center.x + animatedX.value * maxOffsetPx
             val bubbleY = center.y + animatedY.value * maxOffsetPx

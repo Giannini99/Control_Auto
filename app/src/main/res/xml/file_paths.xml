@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-    <files-path name="session_files" path="sessions/" />
+    <!-- Mapeia a raiz do armazenamento interno (filesDir) -->
+    <files-path name="internal" path="." />
+    <!-- Mapeia a raiz do armazenamento externo (getExternalFilesDir) -->
+    <external-files-path name="external" path="." />
 </paths>

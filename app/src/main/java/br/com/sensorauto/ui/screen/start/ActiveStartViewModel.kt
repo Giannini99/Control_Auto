@@ -25,7 +25,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 private const val MAX_SAMPLES = 300
 private const val TIMER_INTERVAL_MS = 50L
@@ -46,7 +47,6 @@ class ActiveStartViewModel(
     private var timerJob: Job? = null
     private var batteryJob: Job? = null
     private var lastLocation: Location? = null
-    private var sessionCounter = 1
     private var deviceId: String = ""
     private var activeConfig: AppConfig? = null
 
@@ -54,7 +54,6 @@ class ActiveStartViewModel(
     private val gyroBuffer  = ArrayDeque<FloatArray>(MAX_SAMPLES)
 
     init {
-        // Sensores em modo preview (Hz padrão UI)
         registerSensors()
         startBatteryPolling()
         viewModelScope.launch {
@@ -72,11 +71,13 @@ class ActiveStartViewModel(
             val config = configRepository.load()
             activeConfig = config
             
-            // Re-registra sensores com a frequência e habilitados do usuário
             registerSensors(config)
             
-            val d = LocalDate.now()
-            val name = "%02d%02d%04d-start-%02d".format(d.dayOfMonth, d.monthValue, d.year, sessionCounter)
+            // Nome da sessão único com data e hora para evitar colisões e arquivos órfãos
+            val now = LocalDateTime.now()
+            val formatter = DateTimeFormatter.ofPattern("ddMMyyyy_HHmmss")
+            val name = "sessao_${now.format(formatter)}"
+            
             val startMs = System.currentTimeMillis()
             
             _uiState.update {
@@ -137,9 +138,7 @@ class ActiveStartViewModel(
         }
         csvWriter.closeSession()
         activeConfig = null
-        sessionCounter++
         
-        // Retorna sensores para modo preview (UI)
         registerSensors()
         
         _uiState.update {
@@ -180,7 +179,6 @@ class ActiveStartViewModel(
     private fun registerSensors(config: AppConfig? = null) {
         sensorManager.unregisterListener(this)
         
-        // Se config for null, estamos em modo PREVIEW (Hz da UI, todos ativos)
         val accelDelay = if (config != null) 1_000_000 / config.accelHz else SensorManager.SENSOR_DELAY_UI
         val gyroDelay = if (config != null) 1_000_000 / config.gyroHz else SensorManager.SENSOR_DELAY_UI
         val magnetoDelay = if (config != null) 1_000_000 / config.magnetoHz else SensorManager.SENSOR_DELAY_UI
@@ -214,7 +212,6 @@ class ActiveStartViewModel(
         when (event.sensor.type) {
             Sensor.TYPE_ACCELEROMETER -> {
                 pushSample(accelBuffer, sample) { copy(accelSamples = accelBuffer.toList()) }
-                // Só grava se estiver rodando E o sensor estiver habilitado na config ativa
                 if (isRecording && (activeConfig?.accelEnabled != false)) {
                     csvWriter.writeAccel(ts, sample[0], sample[1], sample[2])
                     _uiState.update { it.copy(dataPoints = it.dataPoints + 1) }
@@ -252,7 +249,6 @@ class ActiveStartViewModel(
         
         val enabled = config?.gpsEnabled ?: true
         if (enabled && locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            // Converte Hz para milissegundos
             val interval = if (config != null) (1000 / config.gpsHz).toLong() else 1000L
             locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, interval, 0f, this)
         }
@@ -265,7 +261,6 @@ class ActiveStartViewModel(
         val speedKmh = location.speed * 3.6f
         val ts = System.currentTimeMillis()
 
-        // Só grava no CSV se o GPS estiver habilitado na config da sessão
         if (_uiState.value.status == StartStatus.RUNNING && (activeConfig?.gpsEnabled != false)) {
             csvWriter.writeGps(ts, location.latitude, location.longitude, speedKmh)
         }

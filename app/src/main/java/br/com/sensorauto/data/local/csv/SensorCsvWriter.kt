@@ -1,6 +1,7 @@
 package br.com.sensorauto.data.local.csv
 
 import android.content.Context
+import android.media.MediaScannerConnection
 import br.com.sensorauto.domain.model.AppConfig
 import java.io.BufferedWriter
 import java.io.File
@@ -12,34 +13,45 @@ class SensorCsvWriter(private val context: Context) {
     private var gyroWriter: BufferedWriter? = null
     private var gpsWriter: BufferedWriter? = null
     private var magnetoWriter: BufferedWriter? = null
+    private val currentFiles = mutableListOf<String>()
+    
     var sessionDir: File? = null
         private set
 
     fun openSession(sessionName: String, config: AppConfig) {
-        val dir = File(context.filesDir, "sessions/$sessionName").also {
+        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val dir = File(baseDir, "sessions/$sessionName").also {
             it.mkdirs()
             sessionDir = it
         }
         
+        currentFiles.clear()
+
         if (config.accelEnabled) {
-            accelWriter = BufferedWriter(FileWriter(File(dir, "acelerometro.csv"))).also {
+            val file = File(dir, "acelerometro.csv")
+            accelWriter = BufferedWriter(FileWriter(file)).also {
                 it.write("timestamp_ms,x,y,z")
                 it.newLine()
             }
+            currentFiles.add(file.absolutePath)
         }
         
         if (config.gyroEnabled) {
-            gyroWriter = BufferedWriter(FileWriter(File(dir, "giroscopio.csv"))).also {
+            val file = File(dir, "giroscopio.csv")
+            gyroWriter = BufferedWriter(FileWriter(file)).also {
                 it.write("timestamp_ms,x,y,z")
                 it.newLine()
             }
+            currentFiles.add(file.absolutePath)
         }
         
         if (config.gpsEnabled) {
-            gpsWriter = BufferedWriter(FileWriter(File(dir, "gps.csv"))).also {
+            val file = File(dir, "gps.csv")
+            gpsWriter = BufferedWriter(FileWriter(file)).also {
                 it.write("timestamp_ms,lat,lon,speed_kmh")
                 it.newLine()
             }
+            currentFiles.add(file.absolutePath)
         }
 
         if (config.magnetoEnabled) {
@@ -71,5 +83,10 @@ class SensorCsvWriter(private val context: Context) {
         gyroWriter?.close();  gyroWriter  = null
         gpsWriter?.close();   gpsWriter   = null
         magnetoWriter?.close(); magnetoWriter = null
+        
+        // Notifica o sistema sobre os novos arquivos para que apareçam no explorador
+        if (currentFiles.isNotEmpty()) {
+            MediaScannerConnection.scanFile(context, currentFiles.toTypedArray(), null, null)
+        }
     }
 }

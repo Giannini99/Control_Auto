@@ -16,9 +16,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Speed
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -31,7 +31,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import br.com.sensorauto.domain.model.Recording
@@ -109,7 +108,7 @@ fun RecordingDetailScreen(
                 }
             } else {
                 items(files) { file ->
-                    SensorFileCard(file, onClick = { viewModel.shareFile(file) })
+                    SensorFileCard(file, onClick = { viewModel.openFile(file) })
                 }
             }
         }
@@ -150,7 +149,7 @@ private fun SummarySection(recording: Recording) {
                 StatTile("Vel. Máx.", "%.0f km/h".format(recording.maxSpeedKmh), Modifier.weight(1f))
             }
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatTile("Pontos", "%,d".format(recording.dataPoints), Modifier.weight(1f))
+                StatTile("Amostras", "%,d".format(recording.dataPoints), Modifier.weight(1f))
                 StatTile("Dispositivo", recording.deviceId.ifEmpty { "—" }, Modifier.weight(1f))
             }
         }
@@ -225,8 +224,8 @@ private fun SensorFileCard(file: RecordingFile, onClick: () -> Unit) {
                 )
             }
             Icon(
-                imageVector = Icons.Default.Share,
-                contentDescription = "Compartilhar",
+                imageVector = Icons.Default.OpenInNew,
+                contentDescription = "Abrir",
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )

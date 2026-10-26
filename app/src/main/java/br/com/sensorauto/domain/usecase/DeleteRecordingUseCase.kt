@@ -14,8 +14,9 @@ class DeleteRecordingUseCase(
             // Deleta do banco
             repository.delete(id)
             
-            // Deleta arquivos físicos
-            val sessionDir = File(application.filesDir, "sessions/${recording.name}")
+            // Deleta arquivos físicos no armazenamento externo
+            val baseDir = application.getExternalFilesDir(null) ?: application.filesDir
+            val sessionDir = File(baseDir, "sessions/${recording.name}")
             if (sessionDir.exists()) {
                 sessionDir.deleteRecursively()
             }

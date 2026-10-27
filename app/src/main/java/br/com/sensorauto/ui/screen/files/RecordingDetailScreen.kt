@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,7 +32,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import br.com.sensorauto.domain.model.Recording
@@ -50,6 +50,7 @@ fun RecordingDetailScreen(
 ) {
     val recording by viewModel.recording.collectAsState()
     val files by viewModel.files.collectAsState()
+    val isZipping by viewModel.isZipping.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
         Row(
@@ -62,7 +63,7 @@ fun RecordingDetailScreen(
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
             }
             Spacer(Modifier.width(4.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = recordingName,
                     style = MaterialTheme.typography.titleMedium,
@@ -73,6 +74,24 @@ fun RecordingDetailScreen(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            
+            if (isZipping) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp
+                )
+            } else {
+                IconButton(
+                    onClick = { viewModel.shareSessionAsZip() },
+                    enabled = files.isNotEmpty()
+                ) {
+                    Icon(
+                        Icons.Default.Share, 
+                        contentDescription = "Compartilhar tudo",
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
 
@@ -109,7 +128,7 @@ fun RecordingDetailScreen(
                 }
             } else {
                 items(files) { file ->
-                    SensorFileCard(file, onClick = { viewModel.shareFile(file) })
+                    SensorFileCard(file)
                 }
             }
         }
@@ -182,7 +201,7 @@ private fun StatTile(label: String, value: String, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun SensorFileCard(file: RecordingFile, onClick: () -> Unit) {
+private fun SensorFileCard(file: RecordingFile) {
     val icon = when {
         file.name.contains("acelerometro") -> Icons.Default.Sensors
         file.name.contains("giroscopio") -> Icons.Default.Speed
@@ -198,7 +217,6 @@ private fun SensorFileCard(file: RecordingFile, onClick: () -> Unit) {
     }
 
     Card(
-        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -224,12 +242,6 @@ private fun SensorFileCard(file: RecordingFile, onClick: () -> Unit) {
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            Icon(
-                imageVector = Icons.Default.Share,
-                contentDescription = "Compartilhar",
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
-            )
         }
     }
 }

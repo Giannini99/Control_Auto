@@ -18,6 +18,9 @@ interface RecordingDao {
     @Query("SELECT * FROM recordings WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): RecordingEntity?
 
+    @Query("UPDATE recordings SET name = :name WHERE id = :id")
+    suspend fun updateName(id: Long, name: String)
+
     @Query("DELETE FROM recordings WHERE id = :id")
     suspend fun deleteById(id: Long)
 }

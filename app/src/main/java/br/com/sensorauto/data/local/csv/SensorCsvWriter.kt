@@ -13,11 +13,20 @@ class SensorCsvWriter(private val context: Context) {
     private var gpsWriter: BufferedWriter? = null
     var sessionDir: File? = null
         private set
+    
+    var photosDir: File? = null
+        private set
 
     fun openSession(sessionName: String, config: AppConfig) {
         val dir = File(context.filesDir, "sessions/$sessionName").also {
             it.mkdirs()
             sessionDir = it
+        }
+
+        if (config.cameraEnabled) {
+            photosDir = File(dir, "photos").also { it.mkdirs() }
+        } else {
+            photosDir = null
         }
         
         if (config.accelEnabled) {
@@ -58,5 +67,6 @@ class SensorCsvWriter(private val context: Context) {
         accelWriter?.close(); accelWriter = null
         gyroWriter?.close();  gyroWriter  = null
         gpsWriter?.close();   gpsWriter   = null
+        photosDir = null
     }
 }

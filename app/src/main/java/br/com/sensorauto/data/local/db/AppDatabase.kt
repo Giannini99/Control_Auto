@@ -9,7 +9,7 @@ import br.com.sensorauto.data.local.db.dao.RecordingDao
 import br.com.sensorauto.data.local.db.entity.ConfigEntity
 import br.com.sensorauto.data.local.db.entity.RecordingEntity
 
-@Database(entities = [ConfigEntity::class, RecordingEntity::class], version = 4, exportSchema = false)
+@Database(entities = [ConfigEntity::class, RecordingEntity::class], version = 5, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun configDao(): ConfigDao
     abstract fun recordingDao(): RecordingDao

@@ -13,9 +13,10 @@ class UpdateRecordingNameUseCase(
         if (recording != null && recording.name != newName) {
             val oldName = recording.name
             
-            // Renomeia a pasta física
-            val oldDir = File(application.filesDir, "sessions/$oldName")
-            val newDir = File(application.filesDir, "sessions/$newName")
+            // Localiza o diretório base de forma consistente (Externo com Fallback para Interno)
+            val baseDir = application.getExternalFilesDir(null) ?: application.filesDir
+            val oldDir = File(baseDir, "sessions/$oldName")
+            val newDir = File(baseDir, "sessions/$newName")
             
             if (oldDir.exists() && oldDir.isDirectory) {
                 oldDir.renameTo(newDir)

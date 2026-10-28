@@ -42,7 +42,9 @@ class ConfigRepositoryImpl(
         gpsHz = gpsHz,
         cameraEnabled = cameraEnabled,
         cameraIntervalSeconds = cameraIntervalSeconds,
-        segmentMeters = segmentMeters
+        segmentMeters = segmentMeters,
+        magnetoEnabled = magnetoEnabled,
+        magnetoHz = magnetoHz
     )
 
     private fun AppConfig.toEntity() = ConfigEntity(
@@ -65,6 +67,8 @@ class ConfigRepositoryImpl(
         gpsHz = gpsHz,
         cameraEnabled = cameraEnabled,
         cameraIntervalSeconds = cameraIntervalSeconds,
-        segmentMeters = segmentMeters
+        segmentMeters = segmentMeters,
+        magnetoEnabled = magnetoEnabled,
+        magnetoHz = magnetoHz
     )
 }

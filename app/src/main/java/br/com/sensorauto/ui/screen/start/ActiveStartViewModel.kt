@@ -34,13 +34,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.io.File
-import java.time.LocalDate
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
 private const val MAX_SAMPLES = 300
 private const val TIMER_INTERVAL_MS = 50L
 private const val BATTERY_POLL_MS = 10_000L
+private const val TAG = "ActiveStartViewModel"
 
 class ActiveStartViewModel(
     private val sensorManager: SensorManager,
@@ -58,7 +60,6 @@ class ActiveStartViewModel(
     private var batteryJob: Job? = null
     private var photoJob: Job? = null
     private var lastLocation: Location? = null
-    private var sessionCounter = 1
     private var deviceId: String = ""
     private var activeConfig: AppConfig? = null
 
@@ -93,13 +94,10 @@ class ActiveStartViewModel(
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    lifecycleOwner,
-                    cameraSelector,
-                    imageCapture
-                )
+                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, imageCapture)
+                Log.d(TAG, "Câmera configurada com sucesso")
             } catch (exc: Exception) {
-                Log.e("ActiveStartViewModel", "Use case binding failed", exc)
+                Log.e(TAG, "Falha ao vincular Câmera", exc)
             }
         }, ContextCompat.getMainExecutor(context))
     }
@@ -109,10 +107,14 @@ class ActiveStartViewModel(
             val config = configRepository.load()
             activeConfig = config
             
+            // GARANTE O REGISTRO DOS SENSORES (Incluindo Magnetômetro)
             registerSensors(config)
             
-            val d = LocalDate.now()
-            val name = "%02d%02d%04d-start-%02d".format(d.dayOfMonth, d.monthValue, d.year, sessionCounter)
+            // NOME ÚNICO PARA NÃO SOBRESCREVER (PR3 Maycon)
+            val now = LocalDateTime.now()
+            val formatter = DateTimeFormatter.ofPattern("ddMMyyyy_HHmmss")
+            val name = "sessao_${now.format(formatter)}"
+            
             val startMs = System.currentTimeMillis()
             
             _uiState.update {
@@ -139,7 +141,7 @@ class ActiveStartViewModel(
     private fun startPhotoCapture(config: AppConfig) {
         photoJob?.cancel()
         photoJob = viewModelScope.launch {
-            val intervalMs = (config.cameraIntervalSeconds * 1000).toLong()
+            val intervalMs = (config.cameraIntervalSeconds * 1000).toLong().coerceAtLeast(500L)
             while (isActive) {
                 takePhoto()
                 delay(intervalMs)
@@ -151,11 +153,7 @@ class ActiveStartViewModel(
         val capture = imageCapture ?: return
         val photosDir = csvWriter.photosDir ?: return
 
-        val photoFile = File(
-            photosDir,
-            "IMG_${System.currentTimeMillis()}.jpg"
-        )
-
+        val photoFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
         val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
 
         capture.takePicture(
@@ -163,11 +161,10 @@ class ActiveStartViewModel(
             cameraExecutor,
             object : ImageCapture.OnImageSavedCallback {
                 override fun onError(exc: ImageCaptureException) {
-                    Log.e("ActiveStartViewModel", "Photo capture failed: ${exc.message}", exc)
+                    Log.e(TAG, "Erro ao tirar foto: ${exc.message}", exc)
                 }
-
                 override fun onImageSaved(output: ImageCapture.OutputFileResults) {
-                    Log.d("ActiveStartViewModel", "Photo saved: ${photoFile.absolutePath}")
+                    Log.d(TAG, "Foto salva: ${photoFile.absolutePath}")
                 }
             }
         )
@@ -216,7 +213,6 @@ class ActiveStartViewModel(
         }
         csvWriter.closeSession()
         activeConfig = null
-        sessionCounter++
         
         registerSensors()
         
@@ -260,9 +256,11 @@ class ActiveStartViewModel(
         
         val accelDelay = if (config != null) 1_000_000 / config.accelHz else SensorManager.SENSOR_DELAY_UI
         val gyroDelay = if (config != null) 1_000_000 / config.gyroHz else SensorManager.SENSOR_DELAY_UI
+        val magnetoDelay = if (config != null) 1_000_000 / config.magnetoHz else SensorManager.SENSOR_DELAY_UI
         
         val accelEnabled = config?.accelEnabled ?: true
         val gyroEnabled = config?.gyroEnabled ?: true
+        val magnetoEnabled = config?.magnetoEnabled ?: true
 
         if (accelEnabled) {
             sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let {
@@ -272,6 +270,11 @@ class ActiveStartViewModel(
         if (gyroEnabled) {
             sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)?.let {
                 sensorManager.registerListener(this, it, gyroDelay)
+            }
+        }
+        if (magnetoEnabled) {
+            sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)?.let {
+                sensorManager.registerListener(this, it, magnetoDelay)
             }
         }
     }
@@ -293,6 +296,11 @@ class ActiveStartViewModel(
                 pushSample(gyroBuffer, sample) { copy(gyroSamples = gyroBuffer.toList()) }
                 if (isRecording && (activeConfig?.gyroEnabled != false)) {
                     csvWriter.writeGyro(ts, sample[0], sample[1], sample[2])
+                }
+            }
+            Sensor.TYPE_MAGNETIC_FIELD -> {
+                if (isRecording && (activeConfig?.magnetoEnabled != false)) {
+                    csvWriter.writeMagneto(ts, sample[0], sample[1], sample[2])
                 }
             }
         }

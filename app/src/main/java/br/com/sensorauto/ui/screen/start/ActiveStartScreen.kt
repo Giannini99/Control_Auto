@@ -241,7 +241,6 @@ fun ActiveStartScreen(viewModel: ActiveStartViewModel = koinViewModel()) {
 
         HorizontalDivider()
         
-        // Indicador de Câmera Ativa
         if (state.status == StartStatus.RUNNING) {
             Row(
                 modifier = Modifier.fillMaxWidth(),

@@ -24,5 +24,7 @@ data class ConfigEntity(
     val gpsHz: Int = 1,
     val cameraEnabled: Boolean = false,
     val cameraIntervalSeconds: Float = 2.0f,
-    val segmentMeters: Int = 10
+    val segmentMeters: Int = 10,
+    val magnetoEnabled: Boolean = true,
+    val magnetoHz: Int = 50
 )

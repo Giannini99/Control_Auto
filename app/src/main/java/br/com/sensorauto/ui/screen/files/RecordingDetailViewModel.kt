@@ -2,9 +2,12 @@ package br.com.sensorauto.ui.screen.files
 
 import android.app.Application
 import android.content.Intent
+import android.net.Uri
+import android.util.Log
 import androidx.core.content.FileProvider
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import br.com.sensorauto.data.local.csv.SensorCsvWriter
 import br.com.sensorauto.domain.model.Recording
 import br.com.sensorauto.domain.repository.RecordingRepository
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +61,11 @@ class RecordingDetailViewModel(
 
     private fun scanFiles(sessionName: String) {
         val context = getApplication<Application>()
-        val sessionDir = File(context.filesDir, "sessions/$sessionName")
+        // UNIFICAÇÃO: Usa o diretório compartilhado (Externo) definido no SensorCsvWriter
+        val sessionsRoot = SensorCsvWriter.getSessionsRoot(context)
+        val sessionDir = File(sessionsRoot, sessionName)
+        
+        Log.d("RecordingDetailVM", "Buscando arquivos em: ${sessionDir.absolutePath}")
         
         if (sessionDir.exists() && sessionDir.isDirectory) {
             val foundFiles = sessionDir.listFiles()?.map { file ->
@@ -71,7 +78,9 @@ class RecordingDetailViewModel(
             }?.sortedBy { it.name } ?: emptyList()
             
             _files.value = foundFiles
+            Log.d("RecordingDetailVM", "Arquivos encontrados: ${foundFiles.size}")
         } else {
+            Log.w("RecordingDetailVM", "Diretório da sessão não encontrado ou vazio: ${sessionDir.absolutePath}")
             _files.value = emptyList()
         }
     }
@@ -94,7 +103,8 @@ class RecordingDetailViewModel(
 
     private suspend fun createZipFromSession(sessionName: String): File? = withContext(Dispatchers.IO) {
         val context = getApplication<Application>()
-        val sessionDir = File(context.filesDir, "sessions/$sessionName")
+        val sessionsRoot = SensorCsvWriter.getSessionsRoot(context)
+        val sessionDir = File(sessionsRoot, sessionName)
         if (!sessionDir.exists()) return@withContext null
 
         val cacheDir = File(context.cacheDir, "shared_sessions")
@@ -108,7 +118,7 @@ class RecordingDetailViewModel(
             }
             zipFile
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("RecordingDetailVM", "Erro ao criar ZIP", e)
             null
         }
     }
@@ -128,6 +138,35 @@ class RecordingDetailViewModel(
         }
     }
 
+    fun openFile(recordingFile: RecordingFile) {
+        val context = getApplication<Application>()
+        val file = File(recordingFile.path)
+        if (!file.exists() || file.isDirectory) return
+
+        try {
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+
+            val mimeType = if (file.name.endsWith(".csv")) "text/csv" else "image/jpeg"
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, mimeType)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            
+            if (intent.resolveActivity(context.packageManager) != null) {
+                context.startActivity(intent)
+            } else {
+                shareFile(uri, mimeType)
+            }
+        } catch (e: Exception) {
+            Log.e("RecordingDetailVM", "Erro ao abrir arquivo", e)
+        }
+    }
+
     private fun startShareIntent(file: File) {
         val context = getApplication<Application>()
         val uri = FileProvider.getUriForFile(
@@ -135,15 +174,18 @@ class RecordingDetailViewModel(
             "${context.packageName}.fileprovider",
             file
         )
+        shareFile(uri, "application/zip", "Compartilhar sessão (ZIP)")
+    }
 
+    private fun shareFile(uri: Uri, mimeType: String, chooserTitle: String = "Abrir com...") {
+        val context = getApplication<Application>()
         val intent = Intent(Intent.ACTION_SEND).apply {
-            type = "application/zip"
+            type = mimeType
             putExtra(Intent.EXTRA_STREAM, uri)
             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
-
-        val chooser = Intent.createChooser(intent, "Compartilhar sessão (ZIP)")
+        val chooser = Intent.createChooser(intent, chooserTitle)
         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(chooser)
     }

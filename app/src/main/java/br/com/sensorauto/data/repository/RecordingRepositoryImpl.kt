@@ -18,6 +18,9 @@ class RecordingRepositoryImpl(private val dao: RecordingDao) : RecordingReposito
     override suspend fun save(recording: Recording): Long =
         dao.insert(recording.toEntity())
 
+    override suspend fun updateName(id: Long, name: String) =
+        dao.updateName(id, name)
+
     override suspend fun delete(id: Long) = dao.deleteById(id)
 
     private fun Recording.toEntity() = RecordingEntity(

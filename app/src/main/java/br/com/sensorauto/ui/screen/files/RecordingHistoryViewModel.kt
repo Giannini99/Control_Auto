@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import br.com.sensorauto.domain.model.Recording
 import br.com.sensorauto.domain.usecase.DeleteRecordingUseCase
 import br.com.sensorauto.domain.usecase.ObserveRecordingsUseCase
+import br.com.sensorauto.domain.usecase.UpdateRecordingNameUseCase
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -18,7 +19,8 @@ data class RecordingHistoryUiState(
 
 class RecordingHistoryViewModel(
     observeRecordings: ObserveRecordingsUseCase,
-    private val deleteRecording: DeleteRecordingUseCase
+    private val deleteRecording: DeleteRecordingUseCase,
+    private val updateRecordingName: UpdateRecordingNameUseCase
 ) : ViewModel() {
 
     val uiState: StateFlow<RecordingHistoryUiState> = observeRecordings()
@@ -31,5 +33,11 @@ class RecordingHistoryViewModel(
 
     fun delete(id: Long) {
         viewModelScope.launch { deleteRecording(id) }
+    }
+
+    fun rename(id: Long, newName: String) {
+        viewModelScope.launch {
+            updateRecordingName(id, newName)
+        }
     }
 }

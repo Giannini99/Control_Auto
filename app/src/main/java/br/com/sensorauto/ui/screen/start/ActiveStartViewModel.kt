@@ -1,6 +1,7 @@
 package br.com.sensorauto.ui.screen.start
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
@@ -10,6 +11,13 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.BatteryManager
 import android.os.Build
+import android.util.Log
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageCapture
+import androidx.camera.core.ImageCaptureException
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import br.com.sensorauto.data.local.csv.SensorCsvWriter
@@ -25,12 +33,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 private const val MAX_SAMPLES = 300
 private const val TIMER_INTERVAL_MS = 50L
 private const val BATTERY_POLL_MS = 10_000L
+private const val TAG = "ActiveStartViewModel"
 
 class ActiveStartViewModel(
     private val sensorManager: SensorManager,
@@ -46,12 +58,16 @@ class ActiveStartViewModel(
 
     private var timerJob: Job? = null
     private var batteryJob: Job? = null
+    private var photoJob: Job? = null
     private var lastLocation: Location? = null
     private var deviceId: String = ""
     private var activeConfig: AppConfig? = null
 
     private val accelBuffer = ArrayDeque<FloatArray>(MAX_SAMPLES)
     private val gyroBuffer  = ArrayDeque<FloatArray>(MAX_SAMPLES)
+
+    private var imageCapture: ImageCapture? = null
+    private val cameraExecutor: ExecutorService = Executors.newSingleThreadExecutor()
 
     init {
         registerSensors()
@@ -66,14 +82,35 @@ class ActiveStartViewModel(
         }
     }
 
-    fun startSession(hasLocationPermission: Boolean = false) {
+    fun setupCamera(context: Context, lifecycleOwner: LifecycleOwner) {
+        val cameraProviderFuture = ProcessCameraProvider.getInstance(context)
+        cameraProviderFuture.addListener({
+            val cameraProvider = cameraProviderFuture.get()
+            imageCapture = ImageCapture.Builder()
+                .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
+                .build()
+
+            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+
+            try {
+                cameraProvider.unbindAll()
+                cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, imageCapture)
+                Log.d(TAG, "Câmera configurada com sucesso")
+            } catch (exc: Exception) {
+                Log.e(TAG, "Falha ao vincular Câmera", exc)
+            }
+        }, ContextCompat.getMainExecutor(context))
+    }
+
+    fun startSession(hasLocationPermission: Boolean = false, hasCameraPermission: Boolean = false) {
         viewModelScope.launch {
             val config = configRepository.load()
             activeConfig = config
             
+            // GARANTE O REGISTRO DOS SENSORES (Incluindo Magnetômetro)
             registerSensors(config)
             
-            // Nome da sessão único com data e hora para evitar colisões e arquivos órfãos
+            // NOME ÚNICO PARA NÃO SOBRESCREVER (PR3 Maycon)
             val now = LocalDateTime.now()
             val formatter = DateTimeFormatter.ofPattern("ddMMyyyy_HHmmss")
             val name = "sessao_${now.format(formatter)}"
@@ -97,21 +134,59 @@ class ActiveStartViewModel(
             csvWriter.openSession(name, config)
             startTimer()
             if (hasLocationPermission) requestLocation(config)
+            if (hasCameraPermission && config.cameraEnabled) startPhotoCapture(config)
         }
+    }
+
+    private fun startPhotoCapture(config: AppConfig) {
+        photoJob?.cancel()
+        photoJob = viewModelScope.launch {
+            val intervalMs = (config.cameraIntervalSeconds * 1000).toLong().coerceAtLeast(500L)
+            while (isActive) {
+                takePhoto()
+                delay(intervalMs)
+            }
+        }
+    }
+
+    private fun takePhoto() {
+        val capture = imageCapture ?: return
+        val photosDir = csvWriter.photosDir ?: return
+
+        val photoFile = File(photosDir, "IMG_${System.currentTimeMillis()}.jpg")
+        val outputOptions = ImageCapture.OutputFileOptions.Builder(photoFile).build()
+
+        capture.takePicture(
+            outputOptions,
+            cameraExecutor,
+            object : ImageCapture.OnImageSavedCallback {
+                override fun onError(exc: ImageCaptureException) {
+                    Log.e(TAG, "Erro ao tirar foto: ${exc.message}", exc)
+                }
+                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                    Log.d(TAG, "Foto salva: ${photoFile.absolutePath}")
+                }
+            }
+        )
     }
 
     fun pauseSession() {
         _uiState.update { it.copy(status = StartStatus.PAUSED) }
         timerJob?.cancel()
+        photoJob?.cancel()
     }
 
     fun resumeSession() {
         _uiState.update { it.copy(status = StartStatus.RUNNING) }
         startTimer()
+        activeConfig?.let { config ->
+            if (config.cameraEnabled) startPhotoCapture(config)
+        }
     }
 
     fun stopSession() {
         timerJob?.cancel()
+        photoJob?.cancel()
         locationManager.removeUpdates(this)
         lastLocation = null
 
@@ -279,8 +354,10 @@ class ActiveStartViewModel(
     override fun onCleared() {
         timerJob?.cancel()
         batteryJob?.cancel()
+        photoJob?.cancel()
         sensorManager.unregisterListener(this)
         locationManager.removeUpdates(this)
         csvWriter.closeSession()
+        cameraExecutor.shutdown()
     }
 }

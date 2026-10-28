@@ -44,7 +44,7 @@ fun SensorAutoNavHost() {
 
     val bottomItems = listOf(
         BottomNavItem("Iniciar",     Icons.Default.RadioButtonChecked, Screen.ActiveSession),
-        BottomNavItem("Veículo",     Icons.Default.DirectionsCar,      Screen.EquipmentConfig),
+        BottomNavItem("Equipamentos", Icons.Default.DirectionsCar,      Screen.EquipmentConfig),
         BottomNavItem("Sensores",    Icons.Default.Sensors,            Screen.SensorConfig),
         BottomNavItem("Histórico",   Icons.Default.VideoLibrary,       Screen.RecordingFiles),
     )

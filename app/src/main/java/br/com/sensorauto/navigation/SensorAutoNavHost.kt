@@ -1,6 +1,8 @@
 package br.com.sensorauto.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.RadioButtonChecked
@@ -20,6 +22,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -66,24 +72,40 @@ fun SensorAutoNavHost() {
             )
         },
         bottomBar = {
-            NavigationBar {
-                bottomItems.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentDestination?.hierarchy?.any {
-                            it.hasRoute(item.route::class)
-                        } == true,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+            BoxWithConstraints {
+                // Use the item's width for labels rather than Material's narrower label padding.
+                val labelWidth = (maxWidth / bottomItems.size - 8.dp).coerceAtLeast(0.dp)
+                NavigationBar {
+                    bottomItems.forEach { item ->
+                        NavigationBarItem(
+                            selected = currentDestination?.hierarchy?.any {
+                                it.hasRoute(item.route::class)
+                            } == true,
+                            onClick = {
+                                navController.navigate(item.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
+                            },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = {
+                                Text(
+                                    text = item.label,
+                                    modifier = Modifier.requiredWidth(labelWidth),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontSize = 12.sp,
+                                    letterSpacing = 0.sp,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center
+                                )
                             }
-                        },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
-                    )
+                        )
+                    }
                 }
             }
         }

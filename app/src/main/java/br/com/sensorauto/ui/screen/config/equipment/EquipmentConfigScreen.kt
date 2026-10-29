@@ -1,12 +1,15 @@
 package br.com.sensorauto.ui.screen.config.equipment
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,6 +40,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import br.com.sensorauto.ui.theme.LocalThemePreferences
 import br.com.sensorauto.domain.model.GearType
 import br.com.sensorauto.domain.model.MotorType
 import br.com.sensorauto.domain.model.Orientation
@@ -49,6 +54,9 @@ fun EquipmentConfigScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val config = state.config
+    val appearance = LocalThemePreferences.current
+    val effectiveDarkTheme = if (appearance.followSystem) isSystemInDarkTheme()
+                             else appearance.darkTheme
 
     Column(
         modifier = Modifier
@@ -207,6 +215,60 @@ fun EquipmentConfigScreen(
             }
         )
 
+        SectionCard(title = "Aparência") {
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(
+                    value = appearance.followSystem,
+                    role = Role.Switch,
+                    onValueChange = appearance::updateFollowSystem
+                ).padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Usar tema do celular", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (appearance.followSystem) "Tema do celular ativo"
+                        else "Tema do celular desativado",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = appearance.followSystem,
+                    onCheckedChange = null
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(
+                    value = effectiveDarkTheme,
+                    enabled = !appearance.followSystem,
+                    role = Role.Switch,
+                    onValueChange = appearance::updateDarkTheme
+                ).padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("Tema escuro", style = MaterialTheme.typography.bodyLarge)
+                    Text(
+                        if (appearance.followSystem) "Automático: seguindo o celular"
+                        else if (effectiveDarkTheme) "Tema escuro ativo" else "Tema claro ativo",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = effectiveDarkTheme,
+                    onCheckedChange = null,
+                    enabled = !appearance.followSystem
+                )
+            }
+            Text(
+                "A aparência é salva automaticamente.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(
                 onClick = { viewModel.save(onSuccess = {}) },
@@ -314,3 +376,5 @@ private fun OrientationCard(
         }
     }
 }
+
+

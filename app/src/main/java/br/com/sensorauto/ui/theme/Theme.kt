@@ -5,6 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = OrangeAmber,
@@ -16,8 +17,8 @@ private val DarkColorScheme = darkColorScheme(
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = OrangeAmber,
-    onPrimary = SurfaceLight,
+    primary = Color(0xFF9A4800),
+    onPrimary = Color.White,
     secondary = YellowWait,
     tertiary = GreenSuccess,
     background = SurfaceLight,
